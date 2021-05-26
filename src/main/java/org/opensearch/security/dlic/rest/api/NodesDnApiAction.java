@@ -45,14 +45,16 @@ import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
 
+import static org.opensearch.security.dlic.rest.support.Utils.addRoutesPrefix;
+
 /**
  * This class implements CRUD operations to manage dynamic NodesDn. The primary usecase is targeted at cross-cluster where
  * in node restart can be avoided by populating the coordinating cluster's nodes_dn values.
  *
  * The APIs are only accessible to SuperAdmin since the configuration controls the core application layer trust validation.
- * By default the APIs are disabled and can be enabled by a YML setting - {@link ConfigConstants#OPENDISTRO_SECURITY_NODES_DN_DYNAMIC_CONFIG_ENABLED}
+ * By default the APIs are disabled and can be enabled by a YML setting - {@link ConfigConstants#SECURITY_NODES_DN_DYNAMIC_CONFIG_ENABLED}
  *
- * The backing data is stored in {@link ConfigConstants#OPENDISTRO_SECURITY_CONFIG_INDEX_NAME} which is populated during bootstrap.
+ * The backing data is stored in {@link ConfigConstants#SECURITY_CONFIG_INDEX_NAME} which is populated during bootstrap.
  * For existing clusters, {@link SecurityAdmin} tool can
  * be used to populate the index.
  *
@@ -62,26 +64,26 @@ public class NodesDnApiAction extends PatchableResourceApiAction {
     public static final String STATIC_OPENSEARCH_YML_NODES_DN = "STATIC_OPENSEARCH_YML_NODES_DN";
     private final List<String> staticNodesDnFromEsYml;
 
-    private static final List<Route> routes = ImmutableList.of(
-            new Route(Method.GET, "/_opendistro/_security/api/nodesdn/{name}"),
-            new Route(Method.GET, "/_opendistro/_security/api/nodesdn/"),
-            new Route(Method.DELETE, "/_opendistro/_security/api/nodesdn/{name}"),
-            new Route(Method.PUT, "/_opendistro/_security/api/nodesdn/{name}"),
-            new Route(Method.PATCH, "/_opendistro/_security/api/nodesdn/"),
-            new Route(Method.PATCH, "/_opendistro/_security/api/nodesdn/{name}")
-    );
+    private static final List<Route> routes = addRoutesPrefix(ImmutableList.of(
+            new Route(Method.GET, "/nodesdn/{name}"),
+            new Route(Method.GET, "/nodesdn/"),
+            new Route(Method.DELETE, "/nodesdn/{name}"),
+            new Route(Method.PUT, "/nodesdn/{name}"),
+            new Route(Method.PATCH, "/nodesdn/"),
+            new Route(Method.PATCH, "/nodesdn/{name}")
+    ));
 
     @Inject
     public NodesDnApiAction(final Settings settings, final Path configPath, final RestController controller, final Client client,
                             final AdminDNs adminDNs, final ConfigurationRepository cl, final ClusterService cs,
                             final PrincipalExtractor principalExtractor, final PrivilegesEvaluator evaluator, ThreadPool threadPool, AuditLog auditLog) {
         super(settings, configPath, controller, client, adminDNs, cl, cs, principalExtractor, evaluator, threadPool, auditLog);
-        this.staticNodesDnFromEsYml = settings.getAsList(ConfigConstants.OPENDISTRO_SECURITY_NODES_DN, Collections.emptyList());
+        this.staticNodesDnFromEsYml = settings.getAsList(ConfigConstants.SECURITY_NODES_DN, Collections.emptyList());
     }
 
     @Override
     public List<Route> routes() {
-        if (settings.getAsBoolean(ConfigConstants.OPENDISTRO_SECURITY_NODES_DN_DYNAMIC_CONFIG_ENABLED, false)) {
+        if (settings.getAsBoolean(ConfigConstants.SECURITY_NODES_DN_DYNAMIC_CONFIG_ENABLED, false)) {
             return routes;
         }
         return Collections.emptyList();

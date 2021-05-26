@@ -20,6 +20,8 @@ import org.apache.http.HttpStatus;
 import org.opensearch.common.settings.Settings;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import org.opensearch.security.ssl.util.SSLConfigConstants;
 import org.opensearch.security.support.ConfigConstants;
@@ -28,17 +30,32 @@ import org.opensearch.security.test.SingleClusterTest;
 import org.opensearch.security.test.helper.file.FileHelper;
 import org.opensearch.security.test.helper.rest.RestHelper;
 import org.opensearch.security.test.helper.rest.RestHelper.HttpResponse;
+import com.google.common.collect.ImmutableList;
 
+@RunWith(Parameterized.class)
 public class MigrationTests extends SingleClusterTest {
+    private final String ENDPOINT;
+
+    public MigrationTests(String endpoint){
+        ENDPOINT = endpoint;
+    }
+    
+    @Parameterized.Parameters
+    public static Iterable<String> endpoints() {
+        return ImmutableList.of(
+                "_opendistro/_security/api",
+                "_plugins/_security/api"
+        );
+    }
 
     @Test
     public void testSecurityMigrate() throws Exception {
 
         final Settings settings = Settings.builder()
-            .put(SSLConfigConstants.OPENDISTRO_SECURITY_SSL_HTTP_CLIENTAUTH_MODE, "REQUIRE")
-            .put("opendistro_security.ssl.http.enabled",true)
-            .put("opendistro_security.ssl.http.keystore_filepath", FileHelper.getAbsoluteFilePathFromClassPath("migration/node-0-keystore.jks"))
-            .put("opendistro_security.ssl.http.truststore_filepath", FileHelper.getAbsoluteFilePathFromClassPath("migration/truststore.jks"))
+            .put(SSLConfigConstants.SECURITY_SSL_HTTP_CLIENTAUTH_MODE, "REQUIRE")
+            .put("plugins.security.ssl.http.enabled",true)
+            .put("plugins.security.ssl.http.keystore_filepath", FileHelper.getAbsoluteFilePathFromClassPath("migration/node-0-keystore.jks"))
+            .put("plugins.security.ssl.http.truststore_filepath", FileHelper.getAbsoluteFilePathFromClassPath("migration/truststore.jks"))
             .build();
         setup(Settings.EMPTY, new DynamicSecurityConfig().setLegacy(), settings, true);
         final RestHelper rh = restHelper(); //ssl resthelper
@@ -48,15 +65,15 @@ public class MigrationTests extends SingleClusterTest {
         rh.sendAdminCertificate = true;
         rh.keystore = "kirk-keystore.jks";
 
-        HttpResponse res = rh.executePostRequest("_opendistro/_security/api/migrate?pretty", "");
+        HttpResponse res = rh.executePostRequest(ENDPOINT + "/migrate?pretty", "");
         assertContains(res, "*Migration completed*");
         Assert.assertEquals(HttpStatus.SC_OK, res.getStatusCode());
 
-        res = rh.executePostRequest("_opendistro/_security/api/migrate?pretty", "");
+        res = rh.executePostRequest(ENDPOINT + "/migrate?pretty", "");
         assertContains(res, "*it was already migrated*");
         Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, res.getStatusCode());
 
-        res = rh.executeGetRequest("_opendistro/_security/api/validate?pretty");
+        res = rh.executeGetRequest(ENDPOINT + "/validate?pretty");
         assertContains(res, "*it was already migrated*");
         Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, res.getStatusCode());
 
@@ -64,11 +81,11 @@ public class MigrationTests extends SingleClusterTest {
 
     @Test
     public void testSecurityMigrateInvalid() throws Exception {
-        final Settings settings = Settings.builder().put(SSLConfigConstants.OPENDISTRO_SECURITY_SSL_HTTP_CLIENTAUTH_MODE, "REQUIRE")
-            .put("opendistro_security.ssl.http.enabled", true)
-            .put("opendistro_security.ssl.http.keystore_filepath", FileHelper.getAbsoluteFilePathFromClassPath("migration/node-0-keystore.jks"))
-            .put("opendistro_security.ssl.http.truststore_filepath", FileHelper.getAbsoluteFilePathFromClassPath("migration/truststore.jks"))
-            .put(ConfigConstants.OPENDISTRO_SECURITY_UNSUPPORTED_ACCEPT_INVALID_CONFIG, true)
+        final Settings settings = Settings.builder().put(SSLConfigConstants.SECURITY_SSL_HTTP_CLIENTAUTH_MODE, "REQUIRE")
+            .put("plugins.security.ssl.http.enabled", true)
+            .put("plugins.security.ssl.http.keystore_filepath", FileHelper.getAbsoluteFilePathFromClassPath("migration/node-0-keystore.jks"))
+            .put("plugins.security.ssl.http.truststore_filepath", FileHelper.getAbsoluteFilePathFromClassPath("migration/truststore.jks"))
+            .put(ConfigConstants.SECURITY_UNSUPPORTED_ACCEPT_INVALID_CONFIG, true)
             .build();
         setup(Settings.EMPTY, new DynamicSecurityConfig().setSecurityInternalUsers("internal_users2.yml").setLegacy(), settings, true);
         final RestHelper rh = restHelper(); //ssl resthelper
@@ -78,25 +95,25 @@ public class MigrationTests extends SingleClusterTest {
         rh.sendAdminCertificate = true;
         rh.keystore = "kirk-keystore.jks";
 
-        HttpResponse res = rh.executePostRequest("_opendistro/_security/api/migrate?pretty", "");
+        HttpResponse res = rh.executePostRequest(ENDPOINT + "/migrate?pretty", "");
         assertContains(res, "*Migration completed*");
         Assert.assertEquals(HttpStatus.SC_OK, res.getStatusCode());
 
-        res = rh.executePostRequest("_opendistro/_security/api/migrate?pretty", "");
+        res = rh.executePostRequest(ENDPOINT + "/migrate?pretty", "");
         assertContains(res, "*it was already migrated*");
         Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, res.getStatusCode());
 
-        res = rh.executeGetRequest("_opendistro/_security/api/validate?pretty");
+        res = rh.executeGetRequest(ENDPOINT + "/validate?pretty");
         assertContains(res, "*it was already migrated*");
         Assert.assertEquals(HttpStatus.SC_BAD_REQUEST, res.getStatusCode());
     }
 
     @Test
     public void testSecurityValidate() throws Exception {
-        final Settings settings = Settings.builder().put(SSLConfigConstants.OPENDISTRO_SECURITY_SSL_HTTP_CLIENTAUTH_MODE, "REQUIRE")
-            .put("opendistro_security.ssl.http.enabled", true)
-            .put("opendistro_security.ssl.http.keystore_filepath", FileHelper.getAbsoluteFilePathFromClassPath("migration/node-0-keystore.jks"))
-            .put("opendistro_security.ssl.http.truststore_filepath", FileHelper.getAbsoluteFilePathFromClassPath("migration/truststore.jks")).build();
+        final Settings settings = Settings.builder().put(SSLConfigConstants.SECURITY_SSL_HTTP_CLIENTAUTH_MODE, "REQUIRE")
+            .put("plugins.security.ssl.http.enabled", true)
+            .put("plugins.security.ssl.http.keystore_filepath", FileHelper.getAbsoluteFilePathFromClassPath("migration/node-0-keystore.jks"))
+             .put("plugins.security.ssl.http.truststore_filepath", FileHelper.getAbsoluteFilePathFromClassPath("migration/truststore.jks")).build();
         setup(Settings.EMPTY, new DynamicSecurityConfig().setLegacy(), settings, true);
         final RestHelper rh = restHelper(); //ssl resthelper
 
@@ -105,7 +122,7 @@ public class MigrationTests extends SingleClusterTest {
         rh.sendAdminCertificate = true;
         rh.keystore = "kirk-keystore.jks";
 
-        HttpResponse res = rh.executeGetRequest("_opendistro/_security/api/validate?pretty");
+        HttpResponse res = rh.executeGetRequest(ENDPOINT + "/validate?pretty");
         assertContains(res, "*OK*");
         Assert.assertEquals(HttpStatus.SC_OK, res.getStatusCode());
 
@@ -113,11 +130,11 @@ public class MigrationTests extends SingleClusterTest {
 
     @Test
     public void testSecurityValidateWithInvalidConfig() throws Exception {
-        final Settings settings = Settings.builder().put(SSLConfigConstants.OPENDISTRO_SECURITY_SSL_HTTP_CLIENTAUTH_MODE, "REQUIRE")
-            .put("opendistro_security.ssl.http.enabled", true)
-            .put("opendistro_security.ssl.http.keystore_filepath", FileHelper.getAbsoluteFilePathFromClassPath("migration/node-0-keystore.jks"))
-            .put("opendistro_security.ssl.http.truststore_filepath", FileHelper.getAbsoluteFilePathFromClassPath("migration/truststore.jks"))
-            .put(ConfigConstants.OPENDISTRO_SECURITY_UNSUPPORTED_ACCEPT_INVALID_CONFIG, true)
+        final Settings settings = Settings.builder().put(SSLConfigConstants.SECURITY_SSL_HTTP_CLIENTAUTH_MODE, "REQUIRE")
+            .put("plugins.security.ssl.http.enabled", true)
+            .put("plugins.security.ssl.http.keystore_filepath", FileHelper.getAbsoluteFilePathFromClassPath("migration/node-0-keystore.jks"))
+            .put("plugins.security.ssl.http.truststore_filepath", FileHelper.getAbsoluteFilePathFromClassPath("migration/truststore.jks"))
+            .put(ConfigConstants.SECURITY_UNSUPPORTED_ACCEPT_INVALID_CONFIG, true)
             .build();
         setup(Settings.EMPTY, new DynamicSecurityConfig().setSecurityInternalUsers("internal_users2.yml").setLegacy(), settings, true);
         final RestHelper rh = restHelper(); //ssl resthelper
@@ -127,11 +144,11 @@ public class MigrationTests extends SingleClusterTest {
         rh.sendAdminCertificate = true;
         rh.keystore = "kirk-keystore.jks";
 
-        HttpResponse res = rh.executeGetRequest("_opendistro/_security/api/validate?accept_invalid=true&pretty");
+        HttpResponse res = rh.executeGetRequest(ENDPOINT + "/validate?accept_invalid=true&pretty");
         assertContains(res, "*OK*");
         Assert.assertEquals(HttpStatus.SC_OK, res.getStatusCode());
 
-        res = rh.executeGetRequest("_opendistro/_security/api/validate?pretty");
+        res = rh.executeGetRequest(ENDPOINT + "/validate?pretty");
         assertContains(res, "*Configuration is not valid*");
         Assert.assertEquals(HttpStatus.SC_INTERNAL_SERVER_ERROR, res.getStatusCode());
 
@@ -139,12 +156,12 @@ public class MigrationTests extends SingleClusterTest {
 
     @Test
     public void testSecurityMigrateWithEmptyPassword() throws Exception{
-        final Settings settings = Settings.builder().put(SSLConfigConstants.OPENDISTRO_SECURITY_SSL_HTTP_CLIENTAUTH_MODE, "REQUIRE")
-                .put("opendistro_security.ssl.http.enabled", true)
-                .put("opendistro_security.ssl.http.keystore_filepath", FileHelper.getAbsoluteFilePathFromClassPath("migration/node-0-keystore.jks"))
-                .put("opendistro_security.ssl.http.truststore_filepath", FileHelper.getAbsoluteFilePathFromClassPath("migration/truststore.jks"))
-                .put(ConfigConstants.OPENDISTRO_SECURITY_UNSUPPORTED_ACCEPT_INVALID_CONFIG, true)
-                .build();
+        final Settings settings = Settings.builder().put(SSLConfigConstants.SECURITY_SSL_HTTP_CLIENTAUTH_MODE, "REQUIRE")
+            .put("plugins.security.ssl.http.enabled", true)
+            .put("plugins.security.ssl.http.keystore_filepath", FileHelper.getAbsoluteFilePathFromClassPath("migration/node-0-keystore.jks"))
+            .put("plugins.security.ssl.http.truststore_filepath", FileHelper.getAbsoluteFilePathFromClassPath("migration/truststore.jks"))
+            .put(ConfigConstants.SECURITY_UNSUPPORTED_ACCEPT_INVALID_CONFIG, true)
+            .build();
         setup(Settings.EMPTY, new DynamicSecurityConfig().setSecurityInternalUsers("internal_users2.yml").setLegacy(), settings, true);
         final RestHelper rh = restHelper(); //ssl resthelper
 
@@ -158,7 +175,7 @@ public class MigrationTests extends SingleClusterTest {
         String body = "{\"internalusers\":\"" + encodedInternalUsersWithEmptyPassword+ "\"}";
         HttpResponse res = rh.executePutRequest(".opendistro_security/_doc/internalusers", body);
         Assert.assertEquals(HttpStatus.SC_OK, res.getStatusCode());
-        res = rh.executePostRequest("_opendistro/_security/api/migrate?pretty", "");
+        res = rh.executePostRequest(ENDPOINT + "/migrate?pretty", "");
         Assert.assertEquals(HttpStatus.SC_OK, res.getStatusCode());
     }
 
